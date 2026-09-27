@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Macro Calculator | MAMIAN Fitness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  /* ============ EDIT YOUR LINKS HERE (also see LINKS in the script below) ============ */
+  :root {
+    --forest: #2D5C47;
+    --forest-deep: #22473A;
+    --sage: #A8C9B8;
+    --sage-soft: #D4E4DA;
+    --wash: #E8F3F0;
+    --cream: #F5F3F0;
+    --white: #FFFFFF;
+    --ink: #2A332E;
+    --muted: #5E6B64;
+    --serif: "Playfair Display", Georgia, "Times New Roman", serif;
+    --sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --radius: 14px;
+    --ease: cubic-bezier(.22,.8,.28,1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: var(--sans);
+    background: var(--cream);
+    color: var(--ink);
+    line-height: 1.55;
+    min-height: 100vh;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 28px 22px 64px; }
+
+  header.brand { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+  .logo { font-family: var(--serif); font-weight: 700; font-size: 1.2rem; color: var(--forest); letter-spacing: .01em; }
+  .step-count { font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .progress { height: 4px; background: var(--sage-soft); border-radius: 4px; overflow: hidden; margin-bottom: 40px; }
+  .progress-bar { height: 100%; width: 0; background: var(--forest); border-radius: 4px; transition: width .5s var(--ease); }
+
+  /* ---------- steps ---------- */
+  .stage { position: relative; }
+  .step { display: none; }
+  .step.active { display: block; animation: enter .45s var(--ease) both; }
+  .step.active.back { animation-name: enterBack; }
+  @keyframes enter { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+  @keyframes enterBack { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+
+  h1, h2 { font-family: var(--serif); color: var(--forest); font-weight: 700; line-height: 1.15; }
+  .q-title { font-size: clamp(1.7rem, 5vw, 2.3rem); margin-bottom: 8px; }
+  .q-help { color: var(--muted); margin-bottom: 28px; max-width: 52ch; }
+
+  .options { display: grid; gap: 12px; margin-bottom: 28px; }
+  .option {
+    display: flex; align-items: center; gap: 16px;
+    background: var(--white); border: 1.5px solid var(--sage-soft);
+    border-radius: var(--radius); padding: 16px 18px; cursor: pointer;
+    transition: border-color .2s, background .2s;
+    text-align: left; font: inherit; color: inherit; width: 100%;
+  }
+  .option:hover { border-color: var(--sage); }
+  .option .dot {
+    flex: none; width: 22px; height: 22px; border-radius: 50%;
+    border: 1.5px solid var(--sage); display: grid; place-items: center; transition: border-color .2s;
+  }
+  .option .dot::after {
+    content: ""; width: 10px; height: 10px; border-radius: 50%;
+    background: var(--forest); transform: scale(0); transition: transform .25s var(--ease);
+  }
+  .option[aria-checked="true"] { border-color: var(--forest); background: var(--wash); }
+  .option[aria-checked="true"] .dot { border-color: var(--forest); }
+  .option[aria-checked="true"] .dot::after { transform: scale(1); }
+  .opt-label { font-weight: 600; display: block; }
+  .opt-sub { font-size: .9rem; color: var(--muted); display: block; }
+
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 28px; }
+  .field { margin-bottom: 28px; }
+  .field-row .field { margin-bottom: 0; }
+  label.lbl { display: block; font-size: .9rem; font-weight: 500; color: var(--muted); margin-bottom: 8px; }
+  input[type=number] {
+    width: 100%; font: inherit; font-size: 1.15rem; color: var(--ink);
+    background: var(--white); border: 1.5px solid var(--sage-soft);
+    border-radius: var(--radius); padding: 15px 18px; transition: border-color .2s;
+    -moz-appearance: textfield;
+  }
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number]:focus { outline: none; border-color: var(--forest); }
+  .error { color: #9B3B2E; font-size: .9rem; margin: -16px 0 20px; min-height: 1.2em; }
+
+  .actions { display: flex; gap: 12px; }
+  .btn {
+    font: inherit; font-weight: 600; border-radius: 12px; padding: 14px 28px; cursor: pointer;
+    border: 1.5px solid transparent; transition: background .2s, border-color .2s, opacity .2s;
+  }
+  .btn-primary { background: var(--forest); color: var(--white); }
+  .btn-primary:hover { background: var(--forest-deep); }
+  .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-ghost { background: transparent; border-color: var(--sage); color: var(--forest); }
+  .btn-ghost:hover { background: var(--wash); }
+  :focus-visible { outline: 3px solid var(--sage); outline-offset: 3px; }
+
+  /* ---------- results ---------- */
+  .result-title { font-size: clamp(2rem, 6vw, 2.8rem); margin-bottom: 8px; }
+  .result-sub { color: var(--muted); margin-bottom: 30px; }
+
+  .hero-num {
+    background: var(--forest); color: var(--cream); border-radius: 20px;
+    padding: 30px 28px; margin-bottom: 18px;
+  }
+  .hero-num .k { font-size: .95rem; opacity: .85; }
+  .hero-num .v { font-family: var(--serif); font-size: clamp(3rem, 12vw, 4.5rem); line-height: 1; margin: 8px 0 6px; font-variant-numeric: lining-nums; }
+  .hero-num .v small { font-family: var(--sans); font-size: 1rem; font-weight: 500; opacity: .85; margin-left: 6px; }
+  .hero-num .note { font-size: .95rem; opacity: .85; }
+  .goal-tag { display: inline-block; margin-top: 14px; background: rgba(255,255,255,.14); padding: 5px 12px; border-radius: 99px; font-size: .85rem; }
+
+  .macro-bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; margin: 26px 0 16px; }
+  .macro-bar span { display: block; height: 100%; transition: width .9s var(--ease); width: 0; }
+  .c-p { background: var(--forest); } .c-c { background: var(--sage); } .c-f { background: #C9B98F; }
+
+  .macros { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 36px; }
+  .macro { background: var(--white); border: 1.5px solid var(--sage-soft); border-radius: var(--radius); padding: 18px 20px; }
+  .macro .name { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: .95rem; }
+  .macro .sw { width: 10px; height: 10px; border-radius: 3px; }
+  .macro .g { font-family: var(--serif); font-size: 2.2rem; color: var(--forest); line-height: 1.1; margin: 6px 0 2px; }
+  .macro .g small { font-family: var(--sans); font-size: .95rem; color: var(--muted); margin-left: 3px; }
+  .macro .meta { font-size: .88rem; color: var(--muted); }
+
+  h2.sec { font-size: 1.45rem; margin-bottom: 14px; }
+  .math { background: var(--white); border: 1.5px solid var(--sage-soft); border-radius: var(--radius); padding: 6px 20px; margin-bottom: 36px; }
+  .math-row { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--sage-soft); font-variant-numeric: tabular-nums; }
+  .math-row:last-child { border-bottom: 0; font-weight: 600; color: var(--forest); }
+  .math-row span:first-child { color: var(--muted); }
+  .math-row:last-child span:first-child { color: var(--forest); }
+
+  .coach-note { background: var(--wash); border: 1.5px solid var(--sage); border-radius: var(--radius); padding: 22px 22px; margin-bottom: 40px; }
+  .coach-note h3 { font-family: var(--serif); color: var(--forest); font-size: 1.2rem; margin-bottom: 8px; }
+  .coach-note p { max-width: 62ch; }
+  .coach-note a { color: var(--forest); font-weight: 600; }
+
+  .resources { display: grid; gap: 12px; margin-bottom: 36px; }
+  .res {
+    display: flex; align-items: center; gap: 16px; text-decoration: none; color: inherit;
+    background: var(--white); border: 1.5px solid var(--sage-soft); border-radius: var(--radius);
+    padding: 16px 18px; transition: border-color .2s, background .2s;
+  }
+  .res:hover { border-color: var(--forest); background: var(--wash); }
+  .res .icon { flex: none; width: 46px; height: 46px; border-radius: 12px; background: var(--wash); display: grid; place-items: center; }
+  .res .icon svg { width: 22px; height: 22px; stroke: var(--forest); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .res .t { font-weight: 600; display: block; }
+  .res .d { font-size: .9rem; color: var(--muted); display: block; }
+  .res.feature { background: var(--forest); border-color: var(--forest); color: var(--cream); }
+  .res.feature .d { color: var(--sage-soft); }
+  .res.feature .icon { background: rgba(255,255,255,.14); }
+  .res.feature .icon svg { stroke: var(--cream); }
+  .res.feature:hover { background: var(--forest-deep); }
+
+  .disclaimer { font-size: .8rem; color: var(--muted); margin-top: 28px; max-width: 62ch; }
+
+  @media (max-width: 520px) {
+    .wrap { padding: 20px 18px 48px; }
+    .macros { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .macro { padding: 14px 16px; }
+    .macro .g { font-size: 1.8rem; }
+    .actions .btn { flex: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="brand">
+    <div class="logo">MAMIAN Fitness</div>
+    <div class="step-count" id="stepCount" aria-live="polite">Step 1 of 6</div>
+  </header>
+  <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="6" aria-valuenow="1" id="progress">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <main class="stage">
+    <!-- Step 1: sex -->
+    <section class="step active" data-step="1">
+      <h1 class="q-title">What's your biological sex?</h1>
+      <p class="q-help">This sets the base of your metabolic rate calculation.</p>
+      <div class="options" role="radiogroup" data-key="sex">
+        <button type="button" class="option" role="radio" aria-checked="false" data-value="female"><span class="dot"></span><span><span class="opt-label">Female</span></span></button>
+        <button type="button" class="option" role="radio" aria-checked="false" data-value="male"><span class="dot"></span><span><span class="opt-label">Male</span></span></button>
+      </div>
+      <div class="actions"><button class="btn btn-primary" data-next disabled>Continue</button></div>
+    </section>
+
+    <!-- Step 2: age -->
+    <section class="step" data-step="2">
+      <h1 class="q-title">How old are you?</h1>
+      <p class="q-help">Your metabolism naturally shifts with age, so this matters.</p>
+      <div class="field">
+        <label class="lbl" for="age">Age (years)</label>
+        <input type="number" id="age" inputmode="numeric" placeholder="e.g. 38" min="18" max="90">
+      </div>
+      <p class="error" id="err2"></p>
+      <div class="actions"><button class="btn btn-ghost" data-back>Back</button><button class="btn btn-primary" data-next>Continue</button></div>
+    </section>
+
+    <!-- Step 3: height -->
+    <section class="step" data-step="3">
+      <h1 class="q-title">What's your height?</h1>
+      <p class="q-help">Feet and inches.</p>
+      <div class="field-row">
+        <div class="field"><label class="lbl" for="ft">Feet</label><input type="number" id="ft" inputmode="numeric" placeholder="5" min="4" max="7"></div>
+        <div class="field"><label class="lbl" for="in">Inches</label><input type="number" id="in" inputmode="numeric" placeholder="6" min="0" max="11"></div>
+      </div>
+      <p class="error" id="err3"></p>
+      <div class="actions"><button class="btn btn-ghost" data-back>Back</button><button class="btn btn-primary" data-next>Continue</button></div>
+    </section>
+
+    <!-- Step 4: weight -->
+    <section class="step" data-step="4">
+      <h1 class="q-title">What's your current weight?</h1>
+      <p class="q-help">In pounds. Today's number is perfect, no judgment here.</p>
+      <div class="field">
+        <label class="lbl" for="lbs">Weight (lbs)</label>
+        <input type="number" id="lbs" inputmode="decimal" placeholder="e.g. 165" min="80" max="500">
+      </div>
+      <p class="error" id="err4"></p>
+      <div class="actions"><button class="btn btn-ghost" data-back>Back</button><button class="btn btn-primary" data-next>Continue</button></div>
+    </section>
+
+    <!-- Step 5: activity -->
+    <section class="step" data-step="5">
+      <h1 class="q-title">How active are you?</h1>
+      <p class="q-help">Be honest here. This has the biggest effect on your calorie target.</p>
+      <div class="options" role="radiogroup" data-key="activity">
+        <button type="button" class="option" role="radio" aria-checked="false" data-value="1.2"><span class="dot"></span><span><span class="opt-label">Sedentary</span><span class="opt-sub">Little to no exercise, mostly sitting</span></span></button>
+        <button type="button" class="option" role="radio" aria-checked="false" data-value="1.375"><span class="dot"></span><span><span class="opt-label">Lightly active</span><span class="opt-sub">Light exercise 1 to 3 days a week</span></span></button>
+        <button type="button" class="option" role="radio" aria-checked="false" data-value="1.55"><span class="dot"></span><span><span class="opt-label">Moderately active</span><span class="opt-sub">Workouts 3 to 5 days a week</span></span></button>
+        <button type="button" class="option" role="radio" aria-checked="false" data-value="1.725"><span class="dot"></span><span><span class="opt-label">Very active</span><span class="opt-sub">Hard training 6 to 7 days a week</span></span></button>
+        <button type="button" class="option" role="radio" aria-checked="false" data-value="1.9"><span class="dot"></span><span><span class="opt-label">Extremely active</span><span class="opt-sub">Hard training plus a physical job</span></span></button>
+      </div>
+      <div class="actions"><button class="btn btn-ghost" data-back>Back</button><button class="btn btn-primary" data-next disabled>Continue</button></div>
+    </section>
+
+    <!-- Step 6: goal -->
+    <section class="step" data-step="6">
+      <h1 class="q-title">What's your goal?</h1>
+      <p class="q-help">We'll adjust your calories from your maintenance number.</p>
+      <div class="options" role="radiogroup" data-key="goal">
+        <button type="button" class="option" role="radio" aria-checked="false" data-value="0"><span class="dot"></span><span><span class="opt-label">Maintenance</span><span class="opt-sub">Hold steady and feel good</span></span></button>
+        <button type="button" class="option" role="radio" aria-checked="false" data-value="-500"><span class="dot"></span><span><span class="opt-label">Fat loss</span><span class="opt-sub">About 1 lb a week (500 fewer calories a day)</span></span></button>
+        <button type="button" class="option" role="radio" aria-checked="false" data-value="250"><span class="dot"></span><span><span class="opt-label">Build muscle</span><span class="opt-sub">About 0.5 lb a week (250 extra calories a day)</span></span></button>
+      </div>
+      <div class="actions"><button class="btn btn-ghost" data-back>Back</button><button class="btn btn-primary" data-next disabled>See my macros</button></div>
+    </section>
+
+    <!-- Results -->
+    <section class="step" data-step="7" id="results" aria-live="polite">
+      <h1 class="result-title">Your metabolic blueprint</h1>
+      <p class="result-sub" id="resSub"></p>
+
+      <div class="hero-num">
+        <div class="k">Daily calorie target</div>
+        <div class="v"><span id="rCal">0</span><small>cal/day</small></div>
+        <div class="note">Aim to land close to this most days. Consistency beats perfection.</div>
+        <span class="goal-tag" id="rGoal"></span>
+      </div>
+
+      <div class="macro-bar" aria-hidden="true"><span class="c-p" id="barP"></span><span class="c-c" id="barC"></span><span class="c-f" id="barF"></span></div>
+
+      <div class="macros">
+        <div class="macro"><div class="name"><span class="sw c-p"></span>Protein</div><div class="g"><span id="rP">0</span><small>g</small></div><div class="meta" id="rPm"></div></div>
+        <div class="macro"><div class="name"><span class="sw c-c"></span>Carbs</div><div class="g"><span id="rC">0</span><small>g</small></div><div class="meta" id="rCm"></div></div>
+        <div class="macro"><div class="name"><span class="sw c-f"></span>Fat</div><div class="g"><span id="rF">0</span><small>g</small></div><div class="meta" id="rFm"></div></div>
+        <div class="macro"><div class="name"><span class="sw" style="background:var(--sage-soft)"></span>Fiber</div><div class="g"><span id="rFi">0</span><small>g</small></div><div class="meta">14g per 1,000 calories</div></div>
+      </div>
+
+      <h2 class="sec">How we got there</h2>
+      <div class="math" id="math"></div>
+
+      <div class="coach-note">
+        <h3>A quick note from me</h3>
+        <p>These numbers are a strong starting point. If you're hitting them consistently for 3 to 4 weeks and the scale isn't moving, that's often a sign your hormones or metabolic health are holding you back, not your effort. That's exactly what we dig into together. Grab the <a id="noteBlueprint" href="#" target="_blank" rel="noopener">Metabolic Fat Loss Blueprint</a> or send me a message on <a id="noteIG" href="#" target="_blank" rel="noopener">Instagram</a>.</p>
+      </div>
+
+      <h2 class="sec">Your free resources</h2>
+      <div class="resources">
+        <a class="res" id="lnkBlueprint" href="#" target="_blank" rel="noopener">
+          <span class="icon"><svg viewBox="0 0 24 24"><path d="M4 4h11l5 5v11H4z"/><path d="M15 4v5h5M8 13h8M8 17h5"/></svg></span>
+          <span><span class="t">Metabolic Fat Loss Blueprint</span><span class="d">The full guide to losing weight without wrecking your metabolism</span></span>
+        </a>
+        <a class="res" id="lnkFastFood" href="#" target="_blank" rel="noopener">
+          <span class="icon"><svg viewBox="0 0 24 24"><path d="M5 10h14l-1.5 10h-11z"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+          <span><span class="t">Fast food cheat sheets</span><span class="d">Macro friendly orders at your go-to spots</span></span>
+        </a>
+        <a class="res" id="lnkHoliday" href="#" target="_blank" rel="noopener">
+          <span class="icon"><svg viewBox="0 0 24 24"><path d="M12 3l3 5h-2l3 5h-2l3 5H7l3-5H8l3-5H9z"/><path d="M12 18v3"/></svg></span>
+          <span><span class="t">Holiday guide</span><span class="d">Enjoy the season and keep your progress</span></span>
+        </a>
+        <a class="res feature" id="lnkCall" href="#" target="_blank" rel="noopener">
+          <span class="icon"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></span>
+          <span><span class="t">Book a free strategy call</span><span class="d">Let's build your goal path together</span></span>
+        </a>
+      </div>
+
+      <div class="actions"><button class="btn btn-ghost" id="restart">Start over</button></div>
+
+      <p class="disclaimer">Estimates based on the Mifflin St Jeor equation. Nothing you enter is saved or sent anywhere. This is educational and not medical advice. If you're pregnant, breastfeeding, or managing a medical condition, check with your provider before changing your intake.</p>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ============ EDIT YOUR LINKS HERE ============ */
+const LINKS = {
+  blueprint: "https://drive.google.com/file/d/1NUysfsy49_fCpr-D0oSxpmZ6oZ36CLHa/view?usp=sharing",   // Metabolic Fat Loss Blueprint
+  fastFood:  "https://www.flipsnack.com/87AFDD99E8C/camden-s-fast-food-cheat-sheets",   // Fast food cheat sheets
+  holiday:   "https://www.canva.com/design/DAFSRPlQInA/gxThB4cCDyldY6sXzEdB9w/view",   // Holiday guide
+  call:      "https://mamianfitness.com/trainingvs",   // Book a free strategy call
+  instagram: "https://instagram.com/"  // your Instagram profile
+};
+
+/* ============ SETTINGS ============ */
+const PROTEIN_PER_LB = 1.0;     // grams per lb of bodyweight
+const PROTEIN_MAX_PCT = 0.40;   // protein never exceeds 40% of calories
+const FAT_PCT = 0.30;           // fat is 30% of calories
+const CAL_FLOOR = { female: 1200, male: 1500 };
+
+(function(){
+  const $ = s => document.querySelector(s);
+  const steps = [...document.querySelectorAll('.step')];
+  const TOTAL = 6;
+  let cur = 1;
+  const data = {};
+
+  // apply links
+  const setHref = (id, url) => { const el = document.getElementById(id); if (el) el.href = url; };
+  setHref('lnkBlueprint', LINKS.blueprint); setHref('noteBlueprint', LINKS.blueprint);
+  setHref('lnkFastFood', LINKS.fastFood); setHref('lnkHoliday', LINKS.holiday);
+  setHref('lnkCall', LINKS.call); setHref('noteIG', LINKS.instagram);
+
+  function show(n, dir) {
+    steps.forEach(s => s.classList.remove('active', 'back'));
+    const el = steps.find(s => +s.dataset.step === n);
+    if (dir === 'back') el.classList.add('back');
+    void el.offsetWidth;
+    el.classList.add('active');
+    cur = n;
+    const shown = Math.min(n, TOTAL);
+    $('#progressBar').style.width = (n > TOTAL ? 100 : (shown / TOTAL) * 100) + '%';
+    $('#progress').setAttribute('aria-valuenow', shown);
+    $('#stepCount').textContent = n > TOTAL ? 'Your results' : `Step ${n} of ${TOTAL}`;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const focusEl = el.querySelector('input') || el.querySelector('.option');
+    if (focusEl && n <= TOTAL) setTimeout(() => focusEl.focus({ preventScroll: true }), 350);
+  }
+
+  // radio options
+  document.querySelectorAll('.options').forEach(group => {
+    const key = group.dataset.key;
+    const opts = [...group.querySelectorAll('.option')];
+    const next = group.closest('.step').querySelector('[data-next]');
+    opts.forEach(o => o.addEventListener('click', () => {
+      opts.forEach(x => x.setAttribute('aria-checked', 'false'));
+      o.setAttribute('aria-checked', 'true');
+      data[key] = o.dataset.value;
+      next.disabled = false;
+    }));
+  });
+
+  function err(n, msg) { const e = $('#err' + n); if (e) e.textContent = msg || ''; }
+
+  function validate(n) {
+    if (n === 2) {
+      const a = parseFloat($('#age').value);
+      if (!(a >= 18 && a <= 90)) { err(2, 'Enter an age between 18 and 90.'); return false; }
+      data.age = a;
+    }
+    if (n === 3) {
+      const f = parseFloat($('#ft').value), i = parseFloat($('#in').value || 0);
+      if (!(f >= 4 && f <= 7) || !(i >= 0 && i < 12)) { err(3, 'Enter feet (4 to 7) and inches (0 to 11).'); return false; }
+      data.heightIn = f * 12 + i;
+    }
+    if (n === 4) {
+      const w = parseFloat($('#lbs').value);
+      if (!(w >= 80 && w <= 500)) { err(4, 'Enter a weight between 80 and 500 lbs.'); return false; }
+      data.lbs = w;
+    }
+    err(n, '');
+    return true;
+  }
+
+  document.querySelectorAll('[data-next]').forEach(b => b.addEventListener('click', () => {
+    if (!validate(cur)) return;
+    if (cur === TOTAL) { calculate(); show(TOTAL + 1); } else show(cur + 1);
+  }));
+  document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => show(cur - 1, 'back')));
+
+  // Enter key advances on number steps
+  document.querySelectorAll('input[type=number]').forEach(inp => inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); inp.closest('.step').querySelector('[data-next]').click(); }
+  }));
+
+  const fmt = n => Math.round(n).toLocaleString('en-US');
+
+  function countUp(el, to) {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) { el.textContent = fmt(to); return; }
+    const start = performance.now(), dur = 900;
+    const tick = t => {
+      const p = Math.min((t - start) / dur, 1), e = 1 - Math.pow(1 - p, 3);
+      el.textContent = fmt(to * e);
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  function calculate() {
+    const kg = data.lbs * 0.453592, cm = data.heightIn * 2.54;
+    const bmr = 10 * kg + 6.25 * cm - 5 * data.age + (data.sex === 'male' ? 5 : -161);
+    const mult = parseFloat(data.activity);
+    const tdee = bmr * mult;
+    const adj = parseInt(data.goal, 10);
+    let target = tdee + adj;
+    const floor = CAL_FLOOR[data.sex];
+    const floored = target < floor;
+    if (floored) target = floor;
+    target = Math.round(target);
+
+    // Protein first, fat at a set %, carbs fill the rest. Totals always add up.
+    let pG = Math.round(data.lbs * PROTEIN_PER_LB);
+    pG = Math.min(pG, Math.round((target * PROTEIN_MAX_PCT) / 4));
+    const fG = Math.round((target * FAT_PCT) / 9);
+    const cG = Math.max(0, Math.round((target - pG * 4 - fG * 9) / 4));
+    const fiber = Math.round(target / 1000 * 14);
+
+    const pCal = pG * 4, cCal = cG * 4, fCal = fG * 9, sum = pCal + cCal + fCal;
+    const pct = c => Math.round(c / sum * 100);
+
+    const goalName = { '0': 'Maintenance', '-500': 'Fat loss', '250': 'Build muscle' }[data.goal];
+    $('#resSub').textContent = `Built for you: ${data.sex}, age ${data.age}, ${Math.floor(data.heightIn/12)}'${Math.round(data.heightIn%12)}", ${fmt(data.lbs)} lbs.`;
+    $('#rGoal').textContent = goalName;
+
+    countUp($('#rCal'), target);
+    countUp($('#rP'), pG); countUp($('#rC'), cG); countUp($('#rF'), fG); countUp($('#rFi'), fiber);
+    $('#rPm').textContent = `${fmt(pCal)} cal, ${pct(pCal)}% of total`;
+    $('#rCm').textContent = `${fmt(cCal)} cal, ${pct(cCal)}% of total`;
+    $('#rFm').textContent = `${fmt(fCal)} cal, ${pct(fCal)}% of total`;
+
+    setTimeout(() => {
+      $('#barP').style.width = pct(pCal) + '%';
+      $('#barC').style.width = pct(cCal) + '%';
+      $('#barF').style.width = (100 - pct(pCal) - pct(cCal)) + '%';
+    }, 150);
+
+    const rows = [
+      ['Calories burned at rest (BMR)', fmt(bmr) + ' cal'],
+      ['Activity multiplier', '× ' + mult],
+      ['Maintenance calories (TDEE)', fmt(tdee) + ' cal'],
+      ['Goal adjustment', (adj > 0 ? '+' : adj < 0 ? '−' : '') + fmt(Math.abs(adj)) + ' cal'],
+    ];
+    if (floored) rows.push(['Raised to a safe minimum', fmt(floor) + ' cal']);
+    rows.push(['Your daily target', fmt(target) + ' cal']);
+    $('#math').innerHTML = rows.map(r => `<div class="math-row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('');
+  }
+
+  $('#restart').addEventListener('click', () => {
+    for (const k in data) delete data[k];
+    document.querySelectorAll('input[type=number]').forEach(i => i.value = '');
+    document.querySelectorAll('.option').forEach(o => o.setAttribute('aria-checked', 'false'));
+    document.querySelectorAll('.options').forEach(g => g.closest('.step').querySelector('[data-next]').disabled = true);
+    ['barP','barC','barF'].forEach(id => $('#' + id).style.width = '0');
+    show(1, 'back');
+  });
+
+  show(1);
+})();
+</script>
+</body>
+</html>
